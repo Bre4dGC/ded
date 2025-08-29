@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "common.h"
-#include "lexer.h"
+#include "./lexer.h"
 
 typedef struct {
     Token_Kind kind;
@@ -17,28 +17,78 @@ Literal_Token literal_tokens[] = {
     {.text = "}", .kind = TOKEN_CLOSE_CURLY},
     {.text = ";", .kind = TOKEN_SEMICOLON},
 };
-#define literal_tokens_count (sizeof(literal_tokens)/sizeof(literal_tokens[0]))
+
+#define literal_tokens_count (sizeof(literal_tokens) / sizeof(literal_tokens[0]))
 
 const char *keywords[] = {
-    "auto", "break", "case", "char", "const", "continue", "default", "do", "double",
-    "else", "enum", "extern", "float", "for", "goto", "if", "int", "long", "register",
-    "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef",
-    "union", "unsigned", "void", "volatile", "while", "alignas", "alignof", "and",
-    "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "bitand",
-    "bitor", "bool", "catch", "char16_t", "char32_t", "char8_t", "class", "co_await",
-    "co_return", "co_yield", "compl", "concept", "const_cast", "consteval", "constexpr",
-    "constinit", "decltype", "delete", "dynamic_cast", "explicit", "export", "false",
-    "friend", "inline", "mutable", "namespace", "new", "noexcept", "not", "not_eq",
-    "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "reflexpr",
-    "reinterpret_cast", "requires", "static_assert", "static_cast", "synchronized",
-    "template", "this", "thread_local", "throw", "true", "try", "typeid", "typename",
-    "using", "virtual", "wchar_t", "xor", "xor_eq",
-};
-#define keywords_count (sizeof(keywords)/sizeof(keywords[0]))
+    // data types
+    "int", "short", "long", "float", "double",
+    "char", "wchar_t", "char8_t", "char16_t", "char32_t",
+    "int8_t", "int16_t", "int32_t", "int64_t",
+    "uint8_t", "uint16_t", "uint32_t", "uint64_t",
+    "bool", "void",
+
+    // control flow
+    "if", "else", "while", "for",
+    "do", "switch", "case", "break",
+    "goto", "default", "return", "continue",
+
+    // storage classes
+    "const", "auto", "register", "static",
+    "extern", "thread_local", "mutable",
+
+    // type modifiers
+    "signed", "unsigned", "volatile", "inline",
+
+    // memory management
+    "new", "delete",
+
+    // boolean literals
+    "false", "true", "nullptr",
+
+    // type information
+    "typeid", "typename", "decltype",
+
+    // exception handling
+    "try", "catch", "throw",
+
+    // c++ specific
+    "class", "struct", "union", "enum",
+    "public", "private", "protected", "virtual",
+    "friend", "explicit", "operator", "template",
+    "namespace", "using", "static_assert", "concept",
+    "requires", "consteval", "constexpr", "constinit",
+
+    // alignment
+    "alignas", "alignof",
+
+    // coroutines
+    "co_await", "co_return", "co_yield",
+
+    // casting
+    "dynamic_cast", "static_cast", "reinterpret_cast", "const_cast",
+
+    // atomic operations
+    "atomic_cancel", "atomic_commit", "atomic_noexcept",
+
+    // miscellaneous
+    "sizeof", "typedef", "asm", "noexcept", "this", "reflexpr", "synchronized",
+
+    // alternative tokens
+    "and", "or", "not",
+    "and_eq", "or_eq", "not_eq",
+    "bitand", "bitor",
+    "xor", "xor_eq",
+
+    // additional
+    "import", "module", "concepts", "final", "override"};
+
+#define keywords_count (sizeof(keywords) / sizeof(keywords[0]))
 
 const char *token_kind_name(Token_Kind kind)
 {
-    switch (kind) {
+    switch (kind)
+    {
     case TOKEN_END:
         return "end of content";
     case TOKEN_INVALID:
@@ -59,6 +109,8 @@ const char *token_kind_name(Token_Kind kind)
         return "semicolon";
     case TOKEN_KEYWORD:
         return "keyword";
+    case TOKEN_OPERATOR:
+        return "operator";
     default:
         UNREACHABLE("token_kind_name");
     }
@@ -67,59 +119,70 @@ const char *token_kind_name(Token_Kind kind)
 
 Lexer lexer_new(Free_Glyph_Atlas *atlas, const char *content, size_t content_len)
 {
-    Lexer l = {0};
-    l.atlas = atlas;
-    l.content = content;
-    l.content_len = content_len;
-    return l;
+    Lexer lex = {0};
+    lex.atlas = atlas;
+    lex.content = content;
+    lex.content_len = content_len;
+    return lex;
 }
 
-bool lexer_starts_with(Lexer *l, const char *prefix)
+bool lexer_starts_with(Lexer *lex, const char *prefix)
 {
     size_t prefix_len = strlen(prefix);
-    if (prefix_len == 0) {
+    if (prefix_len == 0)
+    {
         return true;
     }
-    if (l->cursor + prefix_len - 1 >= l->content_len) {
+    if (lex->cursor + prefix_len - 1 >= lex->content_len)
+    {
         return false;
     }
-    for (size_t i = 0; i < prefix_len; ++i) {
-        if (prefix[i] != l->content[l->cursor + i]) {
+    for (size_t i = 0; i < prefix_len; ++i)
+    {
+        if (prefix[i] != lex->content[lex->cursor + i])
+        {
             return false;
         }
     }
     return true;
 }
 
-void lexer_chop_char(Lexer *l, size_t len)
+void lexer_chop_char(Lexer *lex, size_t len)
 {
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i)
+    {
         // TODO: get rid of this assert by checking the length of the choped prefix upfront
-        assert(l->cursor < l->content_len);
-        char x = l->content[l->cursor];
-        l->cursor += 1;
-        if (x == '\n') {
-            l->line += 1;
-            l->bol = l->cursor;
-            l->x = 0;
-        } else {
-            if (l->atlas) {
+        assert(lex->cursor < lex->content_len);
+        char x = lex->content[lex->cursor];
+        lex->cursor += 1;
+        if (x == '\n')
+        {
+            lex->line += 1;
+            lex->bol = lex->cursor;
+            lex->x = 0;
+        }
+        else
+        {
+            if (lex->atlas)
+            {
                 size_t glyph_index = x;
                 // TODO: support for glyphs outside of ASCII range
-                if (glyph_index >= GLYPH_METRICS_CAPACITY) {
+                if (glyph_index >= GLYPH_METRICS_CAPACITY)
+                {
                     glyph_index = '?';
                 }
-                Glyph_Metric metric = l->atlas->metrics[glyph_index];
-                l->x += metric.ax;
+                Glyph_Metric metric = lex->atlas->metrics[glyph_index];
+                lex->x += metric.ax;
             }
         }
     }
 }
 
-void lexer_trim_left(Lexer *l)
+void lexer_trim_left(Lexer *lex)
 {
-    while (l->cursor < l->content_len && isspace(l->content[l->cursor])) {
-        lexer_chop_char(l, 1);
+    while (lex->cursor < lex->content_len && isspace(lex->content[lex->cursor]))
+    {
+        lexer_chop_char(lex, 1);
     }
 }
 
@@ -133,79 +196,148 @@ bool is_symbol(char x)
     return isalnum(x) || x == '_';
 }
 
-Token lexer_next(Lexer *l)
+bool is_operator(char x)
 {
-    lexer_trim_left(l);
+    return x == '+' || x == '-' || x == '*' || x == '/' || x == '%' ||
+           x == '<' || x == '>' || x == '=' || x == '!' || x == '&' ||
+           x == '|' || x == '^' || x == '~' || x == '[' || x == ']' ||
+           x == ',' || x == '.' || x == ':' || x == '?';
+}
+
+void handle_sequence(Lexer *lex)
+{
+    char ch = lex->content[lex->cursor];
+    if (ch == '\\')
+    {
+        lexer_chop_char(lex, 1);
+        if (lex->cursor < lex->content_len)
+        {
+            char next = lex->content[lex->cursor];
+            if (next == 'n' || next == 't' || next == '\\' || next == '"' || next == '\'')
+            {
+                lexer_chop_char(lex, 1);
+            }
+        }
+    }
+    else
+    {
+        lexer_chop_char(lex, 1);
+    }
+}
+
+Token lexer_next(Lexer *lex)
+{
+    lexer_trim_left(lex);
 
     Token token = {
-        .text = &l->content[l->cursor],
+        .text = &lex->content[lex->cursor],
     };
 
-    token.position.x = l->x;
-    token.position.y = -(float)l->line * FREE_GLYPH_FONT_SIZE;
+    token.position.x = lex->x;
+    token.position.y = -(float)lex->line * FREE_GLYPH_FONT_SIZE * LINE_SPACING_FACTOR;
 
-    if (l->cursor >= l->content_len) return token;
+    if (lex->cursor >= lex->content_len)
+        return token;
 
-    if (l->content[l->cursor] == '"') {
-        // TODO: TOKEN_STRING should also handle escape sequences
+    if (isdigit(lex->content[lex->cursor]))
+    {
+        token.kind = TOKEN_NUMBER;
+        // scan digits
+        while (lex->cursor < lex->content_len && isdigit(lex->content[lex->cursor]))
+        {
+            lexer_chop_char(lex, 1);
+        }
+        token.text_len = (size_t)(&lex->content[lex->cursor] - token.text); // <--- added
+        return token;
+    }
+
+    if (lex->content[lex->cursor] == '"')
+    {
         token.kind = TOKEN_STRING;
-        lexer_chop_char(l, 1);
-        while (l->cursor < l->content_len && l->content[l->cursor] != '"' && l->content[l->cursor] != '\n') {
-            lexer_chop_char(l, 1);
+        lexer_chop_char(lex, 1);
+        while (lex->cursor < lex->content_len && lex->content[lex->cursor] != '"' && lex->content[lex->cursor] != '\n')
+        {
+            if (lex->content[lex->cursor] == '\\')
+            {
+                handle_sequence(lex);
+            }
+            else
+            {
+                lexer_chop_char(lex, 1);
+            }
         }
-        if (l->cursor < l->content_len) {
-            lexer_chop_char(l, 1);
+        if (lex->cursor < lex->content_len && lex->content[lex->cursor] == '"')
+        {
+            lexer_chop_char(lex, 1);
         }
-        token.text_len = &l->content[l->cursor] - token.text;
+        token.text_len = &lex->content[lex->cursor] - token.text;
         return token;
     }
 
-    if (l->content[l->cursor] == '#') {
-        // TODO: preproc should also handle newlines
+    if (lex->content[lex->cursor] == '#')
+    {
         token.kind = TOKEN_PREPROC;
-        while (l->cursor < l->content_len && l->content[l->cursor] != '\n') {
-            lexer_chop_char(l, 1);
+        while (lex->cursor < lex->content_len && lex->content[lex->cursor] != ' ')
+        {
+            lexer_chop_char(lex, 1);
         }
-        if (l->cursor < l->content_len) {
-            lexer_chop_char(l, 1);
+        if (lex->cursor < lex->content_len)
+        {
+            lexer_chop_char(lex, 1);
         }
-        token.text_len = &l->content[l->cursor] - token.text;
+        token.text_len = &lex->content[lex->cursor] - token.text;
         return token;
     }
 
-    if (lexer_starts_with(l, "//")) {
+    if (lexer_starts_with(lex, "//"))
+    {
         token.kind = TOKEN_COMMENT;
-        while (l->cursor < l->content_len && l->content[l->cursor] != '\n') {
-            lexer_chop_char(l, 1);
+        while (lex->cursor < lex->content_len && lex->content[lex->cursor] != '\n')
+        {
+            lexer_chop_char(lex, 1);
         }
-        if (l->cursor < l->content_len) {
-            lexer_chop_char(l, 1);
+        if (lex->cursor < lex->content_len)
+        {
+            lexer_chop_char(lex, 1);
         }
-        token.text_len = &l->content[l->cursor] - token.text;
+        token.text_len = &lex->content[lex->cursor] - token.text;
         return token;
     }
-    
-    for (size_t i = 0; i < literal_tokens_count; ++i) {
-        if (lexer_starts_with(l, literal_tokens[i].text)) {
-            // NOTE: this code assumes that there is no newlines in literal_tokens[i].text
+
+    if (is_operator(lex->content[lex->cursor]))
+    {
+        token.kind = TOKEN_OPERATOR;
+        token.text_len = 1;
+        lexer_chop_char(lex, 1);
+        return token;
+    }
+
+    for (size_t i = 0; i < literal_tokens_count; ++i)
+    {
+        if (lexer_starts_with(lex, literal_tokens[i].text))
+        {
             size_t text_len = strlen(literal_tokens[i].text);
             token.kind = literal_tokens[i].kind;
             token.text_len = text_len;
-            lexer_chop_char(l, text_len);
+            lexer_chop_char(lex, text_len);
             return token;
         }
     }
 
-    if (is_symbol_start(l->content[l->cursor])) {
+    if (is_symbol_start(lex->content[lex->cursor]))
+    {
         token.kind = TOKEN_SYMBOL;
-        while (l->cursor < l->content_len && is_symbol(l->content[l->cursor])) {
-            lexer_chop_char(l, 1);
-            token.text_len += 1;
+        while (lex->cursor < lex->content_len && is_symbol(lex->content[lex->cursor]))
+        {
+            lexer_chop_char(lex, 1);
         }
+        token.text_len = (size_t)(&lex->content[lex->cursor] - token.text); // <--- replaced uninitialized increment
 
-        for (size_t i = 0; i < keywords_count; ++i) {
+        for (size_t i = 0; i < keywords_count; ++i)
+        {
             size_t keyword_len = strlen(keywords[i]);
-            if (keyword_len == token.text_len && memcmp(keywords[i], token.text, keyword_len) == 0) {
+            if (keyword_len == token.text_len && memcmp(keywords[i], token.text, keyword_len) == 0)
+            {
                 token.kind = TOKEN_KEYWORD;
                 break;
             }
@@ -214,7 +346,7 @@ Token lexer_next(Lexer *l)
         return token;
     }
 
-    lexer_chop_char(l, 1);
+    lexer_chop_char(lex, 1);
     token.kind = TOKEN_INVALID;
     token.text_len = 1;
     return token;
