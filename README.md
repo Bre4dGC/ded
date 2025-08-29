@@ -1,6 +1,4 @@
-# Dramatic EDitor
-
-**THIS SOFTWARE IS UNFINISHED!!! Don't have any high expectations.**
+# Dream Editor for TExt Yo
 
 # Quick Start
 
