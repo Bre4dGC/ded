@@ -19,7 +19,8 @@ const char *frag_shader_file_paths[COUNT_SIMPLE_SHADERS] = {
 
 static const char *shader_type_as_cstr(GLuint shader)
 {
-    switch (shader) {
+    switch (shader)
+    {
     case GL_VERTEX_SHADER:
         return "GL_VERTEX_SHADER";
     case GL_FRAGMENT_SHADER:
@@ -38,7 +39,8 @@ static bool compile_shader_source(const GLchar *source, GLenum shader_type, GLui
     GLint compiled = 0;
     glGetShaderiv(*shader, GL_COMPILE_STATUS, &compiled);
 
-    if (!compiled) {
+    if (!compiled)
+    {
         GLchar message[1024];
         GLsizei message_size = 0;
         glGetShaderInfoLog(*shader, sizeof(message), &message_size, message);
@@ -56,13 +58,15 @@ static bool compile_shader_file(const char *file_path, GLenum shader_type, GLuin
 
     String_Builder source = {0};
     Errno err = read_entire_file(file_path, &source);
-    if (err != 0) {
+    if (err != 0)
+    {
         fprintf(stderr, "ERROR: failed to load `%s` shader file: %s\n", file_path, strerror(errno));
         return_defer(false);
     }
     sb_append_null(&source);
 
-    if (!compile_shader_source(source.items, shader_type, shader)) {
+    if (!compile_shader_source(source.items, shader_type, shader))
+    {
         fprintf(stderr, "ERROR: failed to compile `%s` shader file\n", file_path);
         return_defer(false);
     }
@@ -73,7 +77,8 @@ defer:
 
 static void attach_shaders_to_program(GLuint *shaders, size_t shaders_count, GLuint program)
 {
-    for (size_t i = 0; i < shaders_count; ++i) {
+    for (size_t i = 0; i < shaders_count; ++i)
+    {
         glAttachShader(program, shaders[i]);
     }
 }
@@ -84,7 +89,8 @@ static bool link_program(GLuint program, const char *file_path, size_t line)
 
     GLint linked = 0;
     glGetProgramiv(program, GL_LINK_STATUS, &linked);
-    if (!linked) {
+    if (!linked)
+    {
         GLsizei message_size = 0;
         GLchar message[1024];
 
@@ -95,7 +101,8 @@ static bool link_program(GLuint program, const char *file_path, size_t line)
     return linked;
 }
 
-typedef struct {
+typedef struct
+{
     Uniform_Slot slot;
     const char *name;
 } Uniform_Def;
@@ -120,10 +127,10 @@ static const Uniform_Def uniform_defs[COUNT_UNIFORM_SLOTS] = {
     },
 };
 
-
 static void get_uniform_location(GLuint program, GLint locations[COUNT_UNIFORM_SLOTS])
 {
-    for (Uniform_Slot slot = 0; slot < COUNT_UNIFORM_SLOTS; ++slot) {
+    for (Uniform_Slot slot = 0; slot < COUNT_UNIFORM_SLOTS; ++slot)
+    {
         locations[slot] = glGetUniformLocation(program, uniform_defs[slot].name);
     }
 }
@@ -148,7 +155,7 @@ void simple_renderer_init(Simple_Renderer *sr)
             GL_FLOAT,
             GL_FALSE,
             sizeof(Simple_Vertex),
-            (GLvoid *) offsetof(Simple_Vertex, position));
+            (GLvoid *)offsetof(Simple_Vertex, position));
 
         // color
         glEnableVertexAttribArray(SIMPLE_VERTEX_ATTR_COLOR);
@@ -158,7 +165,7 @@ void simple_renderer_init(Simple_Renderer *sr)
             GL_FLOAT,
             GL_FALSE,
             sizeof(Simple_Vertex),
-            (GLvoid *) offsetof(Simple_Vertex, color));
+            (GLvoid *)offsetof(Simple_Vertex, color));
 
         // uv
         glEnableVertexAttribArray(SIMPLE_VERTEX_ATTR_UV);
@@ -168,22 +175,26 @@ void simple_renderer_init(Simple_Renderer *sr)
             GL_FLOAT,
             GL_FALSE,
             sizeof(Simple_Vertex),
-            (GLvoid *) offsetof(Simple_Vertex, uv));
+            (GLvoid *)offsetof(Simple_Vertex, uv));
     }
 
     GLuint shaders[2] = {0};
 
-    if (!compile_shader_file(vert_shader_file_path, GL_VERTEX_SHADER, &shaders[0])) {
+    if (!compile_shader_file(vert_shader_file_path, GL_VERTEX_SHADER, &shaders[0]))
+    {
         exit(1);
     }
 
-    for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i) {
-        if (!compile_shader_file(frag_shader_file_paths[i], GL_FRAGMENT_SHADER, &shaders[1])) {
+    for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i)
+    {
+        if (!compile_shader_file(frag_shader_file_paths[i], GL_FRAGMENT_SHADER, &shaders[1]))
+        {
             exit(1);
         }
         sr->programs[i] = glCreateProgram();
         attach_shaders_to_program(shaders, sizeof(shaders) / sizeof(shaders[0]), sr->programs[i]);
-        if (!link_program(sr->programs[i], __FILE__, __LINE__)) {
+        if (!link_program(sr->programs[i], __FILE__, __LINE__))
+        {
             exit(1);
         }
         glDeleteShader(shaders[1]);
@@ -198,31 +209,40 @@ void simple_renderer_reload_shaders(Simple_Renderer *sr)
 
     bool ok = true;
 
-    if (!compile_shader_file(vert_shader_file_path, GL_VERTEX_SHADER, &shaders[0])) {
+    if (!compile_shader_file(vert_shader_file_path, GL_VERTEX_SHADER, &shaders[0]))
+    {
         ok = false;
     }
 
-    for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i) {
-        if (!compile_shader_file(frag_shader_file_paths[i], GL_FRAGMENT_SHADER, &shaders[1])) {
+    for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i)
+    {
+        if (!compile_shader_file(frag_shader_file_paths[i], GL_FRAGMENT_SHADER, &shaders[1]))
+        {
             ok = false;
         }
         programs[i] = glCreateProgram();
         attach_shaders_to_program(shaders, sizeof(shaders) / sizeof(shaders[0]), programs[i]);
-        if (!link_program(programs[i], __FILE__, __LINE__)) {
+        if (!link_program(programs[i], __FILE__, __LINE__))
+        {
             ok = false;
         }
         glDeleteShader(shaders[1]);
     }
     glDeleteShader(shaders[0]);
 
-    if (ok) {
-        for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i) {
+    if (ok)
+    {
+        for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i)
+        {
             glDeleteProgram(sr->programs[i]);
             sr->programs[i] = programs[i];
         }
         printf("Reloaded shaders successfully!\n");
-    } else {
-        for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i) {
+    }
+    else
+    {
+        for (int i = 0; i < COUNT_SIMPLE_SHADERS; ++i)
+        {
             glDeleteProgram(programs[i]);
         }
     }
@@ -255,8 +275,8 @@ void simple_renderer_vertex(Simple_Renderer *sr, Vec2f p, Vec4f c, Vec2f uv)
 #endif
     Simple_Vertex *last = &sr->verticies[sr->verticies_count];
     last->position = p;
-    last->color    = c;
-    last->uv       = uv;
+    last->color = c;
+    last->uv = uv;
     sr->verticies_count += 1;
 }
 

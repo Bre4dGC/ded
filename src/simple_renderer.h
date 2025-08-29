@@ -11,7 +11,8 @@
 
 #include "./la.h"
 
-typedef enum {
+typedef enum
+{
     UNIFORM_SLOT_TIME = 0,
     UNIFORM_SLOT_RESOLUTION,
     UNIFORM_SLOT_CAMERA_POS,
@@ -19,23 +20,26 @@ typedef enum {
     COUNT_UNIFORM_SLOTS,
 } Uniform_Slot;
 
-typedef enum {
+typedef enum
+{
     SIMPLE_VERTEX_ATTR_POSITION = 0,
     SIMPLE_VERTEX_ATTR_COLOR,
     SIMPLE_VERTEX_ATTR_UV,
 } Simple_Vertex_Attr;
 
-typedef struct {
+typedef struct
+{
     Vec2f position;
     Vec4f color;
     Vec2f uv;
 } Simple_Vertex;
 
-#define SIMPLE_VERTICIES_CAP (3*640*1000)
+#define SIMPLE_VERTICIES_CAP (3 * 640 * 1000)
 
-static_assert(SIMPLE_VERTICIES_CAP%3 == 0, "Simple renderer vertex capacity must be divisible by 3. We are rendring triangles after all.");
+static_assert(SIMPLE_VERTICIES_CAP % 3 == 0, "Simple renderer vertex capacity must be divisible by 3. We are rendring triangles after all.");
 
-typedef enum {
+typedef enum
+{
     SHADER_FOR_COLOR = 0,
     SHADER_FOR_IMAGE,
     SHADER_FOR_TEXT,
@@ -43,7 +47,8 @@ typedef enum {
     COUNT_SIMPLE_SHADERS,
 } Simple_Shader;
 
-typedef struct {
+typedef struct
+{
     GLuint vao;
     GLuint vbo;
     GLuint programs[COUNT_SIMPLE_SHADERS];
@@ -83,4 +88,4 @@ void simple_renderer_flush(Simple_Renderer *sr);
 void simple_renderer_sync(Simple_Renderer *sr);
 void simple_renderer_draw(Simple_Renderer *sr);
 
-#endif  // SIMPLE_RENDERER_H_
+#endif // SIMPLE_RENDERER_H_

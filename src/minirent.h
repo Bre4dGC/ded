@@ -39,7 +39,7 @@
 
 struct dirent
 {
-    char d_name[MAX_PATH+1];
+    char d_name[MAX_PATH + 1];
 };
 
 typedef struct DIR DIR;
@@ -48,7 +48,7 @@ DIR *opendir(const char *dirpath);
 struct dirent *readdir(DIR *dirp);
 int closedir(DIR *dirp);
 
-#endif  // MINIRENT_H_
+#endif // MINIRENT_H_
 
 #ifdef MINIRENT_IMPLEMENTATION
 
@@ -66,10 +66,11 @@ DIR *opendir(const char *dirpath)
     char buffer[MAX_PATH];
     snprintf(buffer, MAX_PATH, "%s\\*", dirpath);
 
-    DIR *dir = (DIR*)calloc(1, sizeof(DIR));
+    DIR *dir = (DIR *)calloc(1, sizeof(DIR));
 
     dir->hFind = FindFirstFile(buffer, &dir->data);
-    if (dir->hFind == INVALID_HANDLE_VALUE) {
+    if (dir->hFind == INVALID_HANDLE_VALUE)
+    {
         // TODO: opendir should set errno accordingly on FindFirstFile fail
         // https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
         errno = ENOSYS;
@@ -79,7 +80,8 @@ DIR *opendir(const char *dirpath)
     return dir;
 
 fail:
-    if (dir) {
+    if (dir)
+    {
         free(dir);
     }
 
@@ -90,11 +92,16 @@ struct dirent *readdir(DIR *dirp)
 {
     assert(dirp);
 
-    if (dirp->dirent == NULL) {
-        dirp->dirent = (struct dirent*)calloc(1, sizeof(struct dirent));
-    } else {
-        if(!FindNextFile(dirp->hFind, &dirp->data)) {
-            if (GetLastError() != ERROR_NO_MORE_FILES) {
+    if (dirp->dirent == NULL)
+    {
+        dirp->dirent = (struct dirent *)calloc(1, sizeof(struct dirent));
+    }
+    else
+    {
+        if (!FindNextFile(dirp->hFind, &dirp->data))
+        {
+            if (GetLastError() != ERROR_NO_MORE_FILES)
+            {
                 // TODO: readdir should set errno accordingly on FindNextFile fail
                 // https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
                 errno = ENOSYS;
@@ -118,14 +125,16 @@ int closedir(DIR *dirp)
 {
     assert(dirp);
 
-    if(!FindClose(dirp->hFind)) {
+    if (!FindClose(dirp->hFind))
+    {
         // TODO: closedir should set errno accordingly on FindClose fail
         // https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
         errno = ENOSYS;
         return -1;
     }
 
-    if (dirp->dirent) {
+    if (dirp->dirent)
+    {
         free(dirp->dirent);
     }
     free(dirp);
@@ -133,4 +142,4 @@ int closedir(DIR *dirp)
     return 0;
 }
 
-#endif  // MINIRENT_IMPLEMENTATION
+#endif // MINIRENT_IMPLEMENTATION

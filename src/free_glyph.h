@@ -10,8 +10,8 @@
 #define GL_GLEXT_PROTOTYPES
 #include <SDL2/SDL_opengl.h>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include <freetype2/ft2build.h>
+#include <freetype2/freetype/freetype.h>
 
 #include "simple_renderer.h"
 
@@ -19,7 +19,8 @@
 
 // https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Text_Rendering_02
 
-typedef struct {
+typedef struct
+{
     float ax; // advance.x
     float ay; // advance.y
 
@@ -34,7 +35,8 @@ typedef struct {
 
 #define GLYPH_METRICS_CAPACITY 128
 
-typedef struct {
+typedef struct
+{
     FT_UInt atlas_width;
     FT_UInt atlas_height;
     GLuint glyphs_texture;

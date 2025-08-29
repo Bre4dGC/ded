@@ -2,7 +2,7 @@
 
 Vec2f vec2f(float x, float y)
 {
-    return (Vec2f) {
+    return (Vec2f){
         .x = x,
         .y = y,
     };
@@ -42,7 +42,7 @@ Vec2f vec2f_div(Vec2f a, Vec2f b)
 
 Vec2i vec2i(int x, int y)
 {
-    return (Vec2i) {
+    return (Vec2i){
         .x = x,
         .y = y,
     };
@@ -82,7 +82,7 @@ Vec2i vec2i_div(Vec2i a, Vec2i b)
 
 Vec4f vec4f(float x, float y, float z, float w)
 {
-    return (Vec4f) {
+    return (Vec4f){
         .x = x,
         .y = y,
         .z = z,

@@ -9,24 +9,28 @@
 
 #include <SDL2/SDL.h>
 
-typedef struct {
+typedef struct
+{
     size_t begin;
     size_t end;
 } Line;
 
-typedef struct {
+typedef struct
+{
     Line *items;
     size_t count;
     size_t capacity;
 } Lines;
 
-typedef struct {
+typedef struct
+{
     Token *items;
     size_t count;
     size_t capacity;
 } Tokens;
 
-typedef struct {
+typedef struct
+{
     Free_Glyph_Atlas *atlas;
 
     String_Builder data;
