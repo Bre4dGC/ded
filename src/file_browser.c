@@ -1,11 +1,11 @@
 #include <string.h>
-#include "file_browser.h"
+#include "./file_browser.h"
 #include "sv.h"
 
 static int file_cmp(const void *ap, const void *bp)
 {
-    const char *a = *(const char**)ap;
-    const char *b = *(const char**)bp;
+    const char *a = *(const char **)ap;
+    const char *b = *(const char **)bp;
     return strcmp(a, b);
 }
 
@@ -14,7 +14,8 @@ Errno fb_open_dir(File_Browser *fb, const char *dir_path)
     fb->files.count = 0;
     fb->cursor = 0;
     Errno err = read_entire_dir(dir_path, &fb->files);
-    if (err != 0) {
+    if (err != 0)
+    {
         return err;
     }
     qsort(fb->files.items, fb->files.count, sizeof(*fb->files.items), file_cmp);
@@ -31,7 +32,8 @@ Errno fb_open_dir(File_Browser *fb, const char *dir_path)
 #define PATH_DOT "."
 #define PATH_DOTDOT ".."
 
-typedef struct {
+typedef struct
+{
     String_View *items;
     size_t count;
     size_t capacity;
@@ -41,55 +43,68 @@ void normpath(String_View path, String_Builder *result)
 {
     size_t original_sb_size = result->count;
 
-    if (path.count == 0) {
+    if (path.count == 0)
+    {
         sb_append_cstr(result, PATH_DOT);
         return;
     }
 
     int initial_slashes = 0;
-    while (path.count > 0 && *path.data == *PATH_SEP) {
+    while (path.count > 0 && *path.data == *PATH_SEP)
+    {
         initial_slashes += 1;
         sv_chop_left(&path, 1);
     }
-    if (initial_slashes > 2) {
+    if (initial_slashes > 2)
+    {
         initial_slashes = 1;
     }
 
     Comps new_comps = {0};
 
-    while (path.count > 0) {
+    while (path.count > 0)
+    {
         String_View comp = sv_chop_by_delim(&path, '/');
-        if (comp.count == 0 || sv_eq(comp, SV(PATH_DOT))) {
+        if (comp.count == 0 || sv_eq(comp, SV(PATH_DOT)))
+        {
             continue;
         }
-        if (!sv_eq(comp, SV(PATH_DOTDOT))) {
+        if (!sv_eq(comp, SV(PATH_DOTDOT)))
+        {
             da_append(&new_comps, comp);
             continue;
         }
-        if (initial_slashes == 0 && new_comps.count == 0) {
+        if (initial_slashes == 0 && new_comps.count == 0)
+        {
             da_append(&new_comps, comp);
             continue;
         }
-        if (new_comps.count > 0 && sv_eq(da_last(&new_comps), SV(PATH_DOTDOT))) {
+        if (new_comps.count > 0 && sv_eq(da_last(&new_comps), SV(PATH_DOTDOT)))
+        {
             da_append(&new_comps, comp);
             continue;
         }
-        if (new_comps.count > 0) {
+        if (new_comps.count > 0)
+        {
             new_comps.count -= 1;
             continue;
         }
     }
 
-    for (int i = 0; i < initial_slashes; ++i) {
+    for (int i = 0; i < initial_slashes; ++i)
+    {
         sb_append_cstr(result, PATH_SEP);
     }
 
-    for (size_t i = 0; i < new_comps.count; ++i) {
-        if (i > 0) sb_append_cstr(result, PATH_SEP);
+    for (size_t i = 0; i < new_comps.count; ++i)
+    {
+        if (i > 0)
+            sb_append_cstr(result, PATH_SEP);
         sb_append_buf(result, new_comps.items[i].data, new_comps.items[i].count);
     }
 
-    if (original_sb_size == result->count) {
+    if (original_sb_size == result->count)
+    {
         sb_append_cstr(result, PATH_DOT);
     }
 
@@ -101,7 +116,8 @@ Errno fb_change_dir(File_Browser *fb)
     assert(fb->dir_path.count > 0 && "You need to call fb_open_dir() before fb_change_dir()");
     assert(fb->dir_path.items[fb->dir_path.count - 1] == '\0');
 
-    if (fb->cursor >= fb->files.count) return 0;
+    if (fb->cursor >= fb->files.count)
+        return 0;
 
     const char *dir_name = fb->files.items[fb->cursor];
 
@@ -122,7 +138,8 @@ Errno fb_change_dir(File_Browser *fb)
     fb->cursor = 0;
     Errno err = read_entire_dir(fb->dir_path.items, &fb->files);
 
-    if (err != 0) {
+    if (err != 0)
+    {
         return err;
     }
     qsort(fb->files.items, fb->files.count, sizeof(*fb->files.items), file_cmp);
@@ -140,10 +157,11 @@ void fb_render(const File_Browser *fb, SDL_Window *window, Free_Glyph_Atlas *atl
     float max_line_len = 0.0f;
 
     sr->resolution = vec2f(w, h);
-    sr->time = (float) SDL_GetTicks() / 1000.0f;
+    sr->time = (float)SDL_GetTicks() / 1000.0f;
 
     simple_renderer_set_shader(sr, SHADER_FOR_COLOR);
-    if (fb->cursor < fb->files.count) {
+    if (fb->cursor < fb->files.count)
+    {
         const Vec2f begin = vec2f(0, -((float)fb->cursor + CURSOR_OFFSET) * FREE_GLYPH_FONT_SIZE);
         Vec2f end = begin;
         free_glyph_atlas_measure_line_sized(
@@ -153,45 +171,61 @@ void fb_render(const File_Browser *fb, SDL_Window *window, Free_Glyph_Atlas *atl
     }
     simple_renderer_flush(sr);
 
-    simple_renderer_set_shader(sr, SHADER_FOR_EPICNESS);
-    for (size_t row = 0; row < fb->files.count; ++row) {
+    simple_renderer_set_shader(sr, SHADER_FOR_TEXT);
+    for (size_t row = 0; row < fb->files.count; ++row)
+    {
+        Vec4f color;
+        File_Type ft;
+        type_of_file(fb->files.items[row], &ft);
+        switch (ft)
+        {
+        case FT_DIRECTORY:
+            color = hex_to_vec4f(0xcad3f5ff);
+            break;
+        case FT_REGULAR:    
+            color = hex_to_vec4f(0xa6da95ff);
+            break;
+        case FT_OTHER:
+        default:
+            color = hex_to_vec4f(0xc6a0f6ff);
+            break;
+        }
         const Vec2f begin = vec2f(0, -(float)row * FREE_GLYPH_FONT_SIZE);
         Vec2f end = begin;
-        free_glyph_atlas_render_line_sized(
-            atlas, sr, fb->files.items[row], strlen(fb->files.items[row]),
-            &end,
-            vec4fs(0));
-        // TODO: the max_line_len should be calculated based on what's visible on the screen right now
+        free_glyph_atlas_render_line_sized(atlas, sr, fb->files.items[row], strlen(fb->files.items[row]),&end, color);
         float line_len = fabsf(end.x - begin.x);
-        if (line_len > max_line_len) {
-            max_line_len = line_len;
-        }
+        if (line_len > max_line_len) max_line_len = line_len;
     }
 
     simple_renderer_flush(sr);
 
     // Update camera
     {
-        if (max_line_len > 1000.0f) {
+        if (max_line_len > 1000.0f)
+        {
             max_line_len = 1000.0f;
         }
 
-        float target_scale = w/3/(max_line_len*0.75); // TODO: division by 0
+        float target_scale = w / 3 / (max_line_len * (fb->files.count / (fb->files.count - 2.5)));
 
         Vec2f target = cursor_pos;
         float offset = 0.0f;
 
-        if (target_scale > 3.0f) {
+        if (target_scale > 3.0f)
+        {
             target_scale = 3.0f;
-        } else {
-            offset = cursor_pos.x - w/3/sr->camera_scale;
-            if (offset < 0.0f) offset = 0.0f;
-            target = vec2f(w/3/sr->camera_scale + offset, cursor_pos.y);
+        }
+        else
+        {
+            offset = cursor_pos.x - w / 3 / sr->camera_scale;
+            if (offset < 0.0f)
+                offset = 0.0f;
+            target = vec2f(w / 3 / sr->camera_scale + offset, cursor_pos.y);
         }
 
         sr->camera_vel = vec2f_mul(
-                             vec2f_sub(target, sr->camera_pos),
-                             vec2fs(2.0f));
+            vec2f_sub(target, sr->camera_pos),
+            vec2fs(2.0f));
         sr->camera_scale_vel = (target_scale - sr->camera_scale) * 2.0f;
 
         sr->camera_pos = vec2f_add(sr->camera_pos, vec2f_mul(sr->camera_vel, vec2fs(DELTA_TIME)));
@@ -204,7 +238,8 @@ const char *fb_file_path(File_Browser *fb)
     assert(fb->dir_path.count > 0 && "You need to call fb_open_dir() before fb_file_path()");
     assert(fb->dir_path.items[fb->dir_path.count - 1] == '\0');
 
-    if (fb->cursor >= fb->files.count) return NULL;
+    if (fb->cursor >= fb->files.count)
+        return NULL;
 
     fb->file_path.count = 0;
     sb_append_buf(&fb->file_path, fb->dir_path.items, fb->dir_path.count - 1);

@@ -1,12 +1,13 @@
 #ifndef FILE_BROWSER_H_
 #define FILE_BROWSER_H_
 
-#include "common.h"
+#include "./common.h"
 #include "free_glyph.h"
 
 #include <SDL2/SDL.h>
 
-typedef struct {
+typedef struct
+{
     Files files;
     size_t cursor;
     String_Builder dir_path;
