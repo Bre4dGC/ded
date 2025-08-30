@@ -3,26 +3,24 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include "./editor.h"
-#include "./common.h"
+#include "editor.h"
+#include "common.h"
+
+// TODO: make line spacing configurable
+// TODO: 
 
 void editor_backspace(Editor *e)
 {
-    if (e->searching)
-    {
-        if (e->search.count > 0)
-        {
+    if (e->searching) {
+        if (e->search.count > 0) {
             e->search.count -= 1;
         }
     }
-    else
-    {
-        if (e->cursor > e->data.count)
-        {
+    else {
+        if (e->cursor > e->data.count) {
             e->cursor = e->data.count;
         }
-        if (e->cursor == 0)
-            return;
+        if (e->cursor == 0) return;
 
         memmove(
             &e->data.items[e->cursor - 1],
@@ -36,16 +34,49 @@ void editor_backspace(Editor *e)
 
 void editor_delete(Editor *e)
 {
-    if (e->searching)
-        return;
+    if (e->searching) return;
 
-    if (e->cursor >= e->data.count)
-        return;
+    if (e->cursor >= e->data.count) return;
     memmove(
         &e->data.items[e->cursor],
         &e->data.items[e->cursor + 1],
         e->data.count - e->cursor - 1);
     e->data.count -= 1;
+    editor_retokenize(e);
+}
+
+void editor_delete_word_left(Editor *e)
+{
+    if (e->searching) return;
+    if (e->cursor == 0) return;
+
+    size_t original_cursor = e->cursor;
+    editor_move_word_left(e);
+    size_t new_cursor = e->cursor;
+
+    memmove(
+        &e->data.items[new_cursor],
+        &e->data.items[original_cursor],
+        e->data.count - original_cursor);
+    e->data.count -= (original_cursor - new_cursor);
+    editor_retokenize(e);
+}
+
+void editor_delete_word_right(Editor *e)
+{
+    if (e->searching) return;
+    if (e->cursor >= e->data.count) return;
+    
+    size_t original_cursor = e->cursor;
+    editor_move_word_right(e);
+    size_t new_cursor = e->cursor;
+
+    memmove(
+        &e->data.items[original_cursor],
+        &e->data.items[new_cursor],
+        e->data.count - new_cursor);
+    e->data.count -= (new_cursor - original_cursor);
+    e->cursor = original_cursor;
     editor_retokenize(e);
 }
 
@@ -56,8 +87,7 @@ Errno editor_save_as(Editor *e, const char *file_path)
 {
     printf("Saving as %s...\n", file_path);
     Errno err = write_entire_file(file_path, e->data.items, e->data.count);
-    if (err != 0)
-        return err;
+    if (err != 0) return err;
     e->file_path.count = 0;
     sb_append_cstr(&e->file_path, file_path);
     sb_append_null(&e->file_path);
@@ -77,8 +107,7 @@ Errno editor_load_from_file(Editor *e, const char *file_path)
 
     e->data.count = 0;
     Errno err = read_entire_file(file_path, &e->data);
-    if (err != 0)
-        return err;
+    if (err != 0) return err;
 
     e->cursor = 0;
 
@@ -94,11 +123,9 @@ Errno editor_load_from_file(Editor *e, const char *file_path)
 size_t editor_cursor_row(const Editor *e)
 {
     assert(e->lines.count > 0);
-    for (size_t row = 0; row < e->lines.count; ++row)
-    {
+    for (size_t row = 0; row < e->lines.count; ++row) {
         Line line = e->lines.items[row];
-        if (line.begin <= e->cursor && e->cursor <= line.end)
-        {
+        if (line.begin <= e->cursor && e->cursor <= line.end) {
             return row;
         }
     }
@@ -111,12 +138,10 @@ void editor_move_line_up(Editor *e)
 
     size_t cursor_row = editor_cursor_row(e);
     size_t cursor_col = e->cursor - e->lines.items[cursor_row].begin;
-    if (cursor_row > 0)
-    {
+    if (cursor_row > 0) {
         Line next_line = e->lines.items[cursor_row - 1];
         size_t next_line_size = next_line.end - next_line.begin;
-        if (cursor_col > next_line_size)
-            cursor_col = next_line_size;
+        if (cursor_col > next_line_size) cursor_col = next_line_size;
         e->cursor = next_line.begin + cursor_col;
     }
 }
@@ -127,12 +152,10 @@ void editor_move_line_down(Editor *e)
 
     size_t cursor_row = editor_cursor_row(e);
     size_t cursor_col = e->cursor - e->lines.items[cursor_row].begin;
-    if (cursor_row < e->lines.count - 1)
-    {
+    if (cursor_row < e->lines.count - 1) {
         Line next_line = e->lines.items[cursor_row + 1];
         size_t next_line_size = next_line.end - next_line.begin;
-        if (cursor_col > next_line_size)
-            cursor_col = next_line_size;
+        if (cursor_col > next_line_size) cursor_col = next_line_size;
         e->cursor = next_line.begin + cursor_col;
     }
 }
@@ -140,40 +163,55 @@ void editor_move_line_down(Editor *e)
 void editor_move_char_left(Editor *e)
 {
     editor_stop_search(e);
-    if (e->cursor > 0)
-        e->cursor -= 1;
+    if (e->cursor > 0) e->cursor -= 1;
 }
 
 void editor_move_char_right(Editor *e)
 {
     editor_stop_search(e);
-    if (e->cursor < e->data.count)
-        e->cursor += 1;
+    if (e->cursor < e->data.count) e->cursor += 1;
 }
 
 void editor_move_word_left(Editor *e)
 {
     editor_stop_search(e);
-    while (e->cursor > 0 && !isalnum(e->data.items[e->cursor - 1]))
-    {
-        e->cursor -= 1;
+    if(isalnum(e->data.items[e->cursor - 1])) {
+        while (isalnum(e->data.items[e->cursor - 1]) && e->cursor < e->data.count) {
+            e->cursor -= 1;
+        }
     }
-    while (e->cursor > 0 && isalnum(e->data.items[e->cursor - 1]))
-    {
-        e->cursor -= 1;
+    else if (e->data.items[e->cursor - 1] == '\n') {
+        e->cursor--;
+    }
+    else {
+        while (!isalnum(e->data.items[e->cursor - 1]) && 
+                e->cursor < e->data.count && 
+                e->data.items[e->cursor - 1] != '\n' && 
+                e->cursor > 0)
+        {
+            e->cursor -= 1;
+        }
     }
 }
 
 void editor_move_word_right(Editor *e)
 {
     editor_stop_search(e);
-    while (e->cursor < e->data.count && !isalnum(e->data.items[e->cursor]))
-    {
-        e->cursor += 1;
+    if(isalnum(e->data.items[e->cursor])) {
+        while (isalnum(e->data.items[e->cursor]) && e->cursor < e->data.count) {
+            e->cursor++;
+        }
     }
-    while (e->cursor < e->data.count && isalnum(e->data.items[e->cursor]))
-    {
-        e->cursor += 1;
+    else if (e->data.items[e->cursor] == '\n') {
+        e->cursor++;
+    }
+    else {
+        while (!isalnum(e->data.items[e->cursor]) && 
+                e->cursor < e->data.count && 
+                e->data.items[e->cursor] != '\n')
+        {
+            e->cursor++;
+        }        
     }
 }
 
@@ -184,31 +222,24 @@ void editor_insert_char(Editor *e, char x)
 
 void editor_insert_buf(Editor *e, char *buf, size_t buf_len)
 {
-    if (e->searching)
-    {
+    if (e->searching) {
         sb_append_buf(&e->search, buf, buf_len);
         bool matched = false;
-        for (size_t pos = e->cursor; pos < e->data.count; ++pos)
-        {
-            if (editor_search_matches_at(e, pos))
-            {
+        for (size_t pos = e->cursor; pos < e->data.count; ++pos) {
+            if (editor_search_matches_at(e, pos))             {
                 e->cursor = pos;
                 matched = true;
                 break;
             }
         }
-        if (!matched)
-            e->search.count -= buf_len;
+        if (!matched) e->search.count -= buf_len;
     }
-    else
-    {
-        if (e->cursor > e->data.count)
-        {
+    else {
+        if (e->cursor > e->data.count) {
             e->cursor = e->data.count;
         }
 
-        for (size_t i = 0; i < buf_len; ++i)
-        {
+        for (size_t i = 0; i < buf_len; ++i) {
             da_append(&e->data, '\0');
         }
         memmove(
@@ -230,10 +261,8 @@ void editor_retokenize(Editor *e)
         Line line;
         line.begin = 0;
 
-        for (size_t i = 0; i < e->data.count; ++i)
-        {
-            if (e->data.items[i] == '\n')
-            {
+        for (size_t i = 0; i < e->data.count; ++i) {
+            if (e->data.items[i] == '\n') {
                 line.end = i;
                 da_append(&e->lines, line);
                 line.begin = i + 1;
@@ -249,8 +278,7 @@ void editor_retokenize(Editor *e)
         e->tokens.count = 0;
         Lexer l = lexer_new(e->atlas, e->data.items, e->data.count);
         Token t = lexer_next(&l);
-        while (t.kind != TOKEN_END)
-        {
+        while (t.kind != TOKEN_END) {
             da_append(&e->tokens, t);
             t = lexer_next(&l);
         }
@@ -260,19 +288,15 @@ void editor_retokenize(Editor *e)
 bool editor_line_starts_with(Editor *e, size_t row, size_t col, const char *prefix)
 {
     size_t prefix_len = strlen(prefix);
-    if (prefix_len == 0)
-    {
+    if (prefix_len == 0) {
         return true;
     }
     Line line = e->lines.items[row];
-    if (col + prefix_len - 1 >= line.end)
-    {
+    if (col + prefix_len - 1 >= line.end) {
         return false;
     }
-    for (size_t i = 0; i < prefix_len; ++i)
-    {
-        if (prefix[i] != e->data.items[line.begin + col + i])
-        {
+    for (size_t i = 0; i < prefix_len; ++i) {
+        if (prefix[i] != e->data.items[line.begin + col + i]) {
             return false;
         }
     }
@@ -281,10 +305,8 @@ bool editor_line_starts_with(Editor *e, size_t row, size_t col, const char *pref
 
 const char *editor_line_starts_with_one_of(Editor *e, size_t row, size_t col, const char **prefixes, size_t prefixes_count)
 {
-    for (size_t i = 0; i < prefixes_count; ++i)
-    {
-        if (editor_line_starts_with(e, row, col, prefixes[i]))
-        {
+    for (size_t i = 0; i < prefixes_count; ++i) {
+        if (editor_line_starts_with(e, row, col, prefixes[i])) {
             return prefixes[i];
         }
     }
@@ -304,31 +326,25 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
     // Render selection
     {
         simple_renderer_set_shader(sr, SHADER_FOR_COLOR);
-        if (editor->selection)
-        {
-            for (size_t row = 0; row < editor->lines.count; ++row)
-            {
+        if (editor->selection) {
+            for (size_t row = 0; row < editor->lines.count; ++row) {
                 size_t select_begin_chr = editor->select_begin;
                 size_t select_end_chr = editor->cursor;
-                if (select_begin_chr > select_end_chr)
-                {
+                if (select_begin_chr > select_end_chr) {
                     SWAP(size_t, select_begin_chr, select_end_chr);
                 }
 
                 Line line_chr = editor->lines.items[row];
 
-                if (select_begin_chr < line_chr.begin)
-                {
+                if (select_begin_chr < line_chr.begin) {
                     select_begin_chr = line_chr.begin;
                 }
 
-                if (select_end_chr > line_chr.end)
-                {
+                if (select_end_chr > line_chr.end) {
                     select_end_chr = line_chr.end;
                 }
 
-                if (select_begin_chr <= select_end_chr)
-                {
+                if (select_begin_chr <= select_end_chr) {
                     Vec2f select_begin_scr = vec2f(0, -((float)row + CURSOR_OFFSET) * FREE_GLYPH_FONT_SIZE * LINE_SPACING_FACTOR);
                     free_glyph_atlas_measure_line_sized(
                         atlas, editor->data.items + line_chr.begin, select_begin_chr - line_chr.begin,
@@ -353,17 +369,12 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
         Line line = editor->lines.items[cursor_row];
         size_t cursor_col = editor->cursor - line.begin;
         cursor_pos.y = -((float)cursor_row + CURSOR_OFFSET) * FREE_GLYPH_FONT_SIZE * LINE_SPACING_FACTOR;
-        cursor_pos.x = free_glyph_atlas_cursor_pos(
-            atlas,
-            editor->data.items + line.begin, line.end - line.begin,
-            vec2f(0.0, cursor_pos.y),
-            cursor_col);
+        cursor_pos.x = free_glyph_atlas_cursor_pos(atlas, editor->data.items + line.begin, line.end - line.begin, vec2f(0.0, cursor_pos.y), cursor_col);
     }
 
     // Render search
     {
-        if (editor->searching)
-        {
+        if (editor->searching) {
             simple_renderer_set_shader(sr, SHADER_FOR_COLOR);
             Vec4f selection_color = vec4f(.10, .10, .25, 1);
             Vec2f p1 = cursor_pos;
@@ -377,46 +388,43 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
     // Render text
     {
         simple_renderer_set_shader(sr, SHADER_FOR_TEXT);
-        for (size_t i = 0; i < editor->tokens.count; ++i)
-        {
+        for (size_t i = 0; i < editor->tokens.count; ++i) {
             Token token = editor->tokens.items[i];
             Vec2f pos = token.position;
             Vec4f color = vec4fs(1);
-            switch (token.kind)
-            {
-            case TOKEN_INVALID:
-                color = hex_to_vec4f(0xed8796ff);
-                break;
-            case TOKEN_PREPROC:
-                color = hex_to_vec4f(0x6e738dff);
-                break;
-            case TOKEN_SYMBOL:
-                color = hex_to_vec4f(0xcad3f5ff);
-                break;
-            case TOKEN_OPEN_PAREN:
-            case TOKEN_CLOSE_PAREN:
-            case TOKEN_OPEN_CURLY:
-            case TOKEN_CLOSE_CURLY:
-            case TOKEN_SEMICOLON:
-                color = hex_to_vec4f(0xf8bd96ff);
-                break;
-            case TOKEN_KEYWORD:
-                color = hex_to_vec4f(0xc6a0f6ff);
-                break;
-            case TOKEN_OPERATOR:
-                color = hex_to_vec4f(0x91d7e3ff);
-                break;
-            case TOKEN_NUMBER:
-                color = hex_to_vec4f(0xf9e2afff);
-                break;
-            case TOKEN_COMMENT:
-                color = hex_to_vec4f(0x6e738dff);
-                break;
-            case TOKEN_STRING:
-                color = hex_to_vec4f(0xa6da95ff);
-                break;
-            default:
-                break;
+            switch (token.kind) {
+                case TOKEN_INVALID:
+                    color = hex_to_vec4f(0xed8796ff);
+                    break;
+                case TOKEN_PREPROC:
+                    color = hex_to_vec4f(0x6e738dff);
+                    break;
+                case TOKEN_SYMBOL:
+                    color = hex_to_vec4f(0xcad3f5ff);
+                    break;
+                case TOKEN_OPEN_PAREN:
+                case TOKEN_CLOSE_PAREN:
+                case TOKEN_OPEN_CURLY:
+                case TOKEN_CLOSE_CURLY:
+                case TOKEN_SEMICOLON:
+                    color = hex_to_vec4f(0xf8bd96ff);
+                    break;
+                case TOKEN_KEYWORD:
+                    color = hex_to_vec4f(0xc6a0f6ff);
+                    break;
+                case TOKEN_OPERATOR:
+                    color = hex_to_vec4f(0x91d7e3ff);
+                    break;
+                case TOKEN_NUMBER:
+                    color = hex_to_vec4f(0xf9e2afff);
+                    break;
+                case TOKEN_COMMENT:
+                    color = hex_to_vec4f(0x6e738dff);
+                    break;
+                case TOKEN_STRING:
+                    color = hex_to_vec4f(0xa6da95ff);
+                    break;
+                default: break;
             }
             free_glyph_atlas_render_line_sized(atlas, sr, token.text, token.text_len, &pos, color);
             
@@ -434,8 +442,7 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
         Uint32 t = SDL_GetTicks() - editor->last_stroke;
 
         sr->verticies_count = 0;
-        if (t < CURSOR_BLINK_THRESHOLD || t / CURSOR_BLINK_PERIOD % 2 != 0)
-        {
+        if (t < CURSOR_BLINK_THRESHOLD || t / CURSOR_BLINK_PERIOD % 2 != 0) {
             simple_renderer_solid_rect(sr, cursor_pos, vec2f(CURSOR_WIDTH, FREE_GLYPH_FONT_SIZE * LINE_SPACING_FACTOR), vec4fs(1));
         }
 
@@ -444,25 +451,21 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
 
     // Update camera
     {
-        if (max_line_len > 1000.0f)
-        {
+        if (max_line_len > 1000.0f) {
             max_line_len = 1000.0f;
         }
 
-        float target_scale = w / 3 / (max_line_len * 1.50); // TODO: division by 0
+        float target_scale = w / 3 / (max_line_len * 1.75); // TODO: division by 0
 
         Vec2f target = cursor_pos;
         float offset = 0.0f;
 
-        if (target_scale > 3.0f)
-        {
+        if (target_scale > 3.0f) {
             target_scale = 3.0f;
         }
-        else
-        {
+        else {
             offset = cursor_pos.x - w / 3 / sr->camera_scale;
-            if (offset < 0.0f)
-                offset = 0.0f;
+            if (offset < 0.0f) offset = 0.0f;
             target = vec2f(w / 3 / sr->camera_scale + offset, cursor_pos.y);
         }
 
@@ -478,20 +481,15 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
 
 void editor_update_selection(Editor *e, bool shift)
 {
-    if (e->searching)
-        return;
-    if (shift)
-    {
-        if (!e->selection)
-        {
+    if (e->searching) return;
+    if (shift) {
+        if (!e->selection) {
             e->selection = true;
             e->select_begin = e->cursor;
         }
     }
-    else
-    {
-        if (e->selection)
-        {
+    else {
+        if (e->selection) {
             e->selection = false;
         }
     }
@@ -499,21 +497,18 @@ void editor_update_selection(Editor *e, bool shift)
 
 void editor_clipboard_copy(Editor *e)
 {
-    if (e->searching)
-        return;
-    if (e->selection)
-    {
+    if (e->searching) return;
+
+    if (e->selection) {
         size_t begin = e->select_begin;
         size_t end = e->cursor;
-        if (begin > end)
-            SWAP(size_t, begin, end);
+        if (begin > end) SWAP(size_t, begin, end);
 
         e->clipboard.count = 0;
         sb_append_buf(&e->clipboard, &e->data.items[begin], end - begin + 1);
         sb_append_null(&e->clipboard);
 
-        if (SDL_SetClipboardText(e->clipboard.items) < 0)
-        {
+        if (SDL_SetClipboardText(e->clipboard.items) < 0) {
             fprintf(stderr, "ERROR: SDL ERROR: %s\n", SDL_GetError());
         }
     }
@@ -523,12 +518,10 @@ void editor_clipboard_paste(Editor *e)
 {
     char *text = SDL_GetClipboardText();
     size_t text_len = strlen(text);
-    if (text_len > 0)
-    {
+    if (text_len > 0) {
         editor_insert_buf(e, text, text_len);
     }
-    else
-    {
+    else {
         fprintf(stderr, "ERROR: SDL ERROR: %s\n", SDL_GetError());
     }
     SDL_free(text);
@@ -536,29 +529,18 @@ void editor_clipboard_paste(Editor *e)
 
 void editor_start_search(Editor *e)
 {
-    if (e->searching)
-    {
-        for (size_t pos = e->cursor + 1; pos < e->data.count; ++pos)
-        {
-            if (editor_search_matches_at(e, pos))
-            {
+    if (e->searching) {
+        for (size_t pos = e->cursor + 1; pos < e->data.count; ++pos) {
+            if (editor_search_matches_at(e, pos)) {
                 e->cursor = pos;
                 break;
             }
         }
     }
-    else
-    {
+    else {
         e->searching = true;
-        if (e->selection)
-        {
-            e->selection = false;
-            // TODO: put the selection into the search automatically
-        }
-        else
-        {
-            e->search.count = 0;
-        }
+        if (e->selection) e->selection = false; // TODO: put the selection into the search automatically
+        else e->search.count = 0;
     }
 }
 
@@ -569,12 +551,9 @@ void editor_stop_search(Editor *e)
 
 bool editor_search_matches_at(Editor *e, size_t pos)
 {
-    if (e->data.count - pos < e->search.count)
-        return false;
-    for (size_t i = 0; i < e->search.count; ++i)
-    {
-        if (e->search.items[i] != e->data.items[pos + i])
-        {
+    if (e->data.count - pos < e->search.count) return false;
+    for (size_t i = 0; i < e->search.count; ++i) {
+        if (e->search.items[i] != e->data.items[pos + i]) {
             return false;
         }
     }
@@ -611,12 +590,10 @@ void editor_move_paragraph_up(Editor *e)
 {
     editor_stop_search(e);
     size_t row = editor_cursor_row(e);
-    while (row > 0 && e->lines.items[row].end - e->lines.items[row].begin <= 1)
-    {
+    while (row > 0 && e->lines.items[row].end - e->lines.items[row].begin <= 1) {
         row -= 1;
     }
-    while (row > 0 && e->lines.items[row].end - e->lines.items[row].begin > 1)
-    {
+    while (row > 0 && e->lines.items[row].end - e->lines.items[row].begin > 1) {
         row -= 1;
     }
     e->cursor = e->lines.items[row].begin;
@@ -626,13 +603,16 @@ void editor_move_paragraph_down(Editor *e)
 {
     editor_stop_search(e);
     size_t row = editor_cursor_row(e);
-    while (row + 1 < e->lines.count && e->lines.items[row].end - e->lines.items[row].begin <= 1)
-    {
+    while (row + 1 < e->lines.count && e->lines.items[row].end - e->lines.items[row].begin <= 1) {
         row += 1;
     }
-    while (row + 1 < e->lines.count && e->lines.items[row].end - e->lines.items[row].begin > 1)
-    {
+    while (row + 1 < e->lines.count && e->lines.items[row].end - e->lines.items[row].begin > 1) {
         row += 1;
     }
     e->cursor = e->lines.items[row].begin;
+}
+
+void editor_formatting_indent(Editor *e)
+{
+    // TODO: implement
 }
