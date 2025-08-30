@@ -50,8 +50,7 @@ typedef int Errno;
 #define da_last(da) (assert((da)->count > 0), (da)->items[(da)->count - 1])
 
 #define da_move(dst, src)                 \
-    do                                    \
-    {                                     \
+    do {                                  \
         free((dst)->items);               \
         (dst)->items = (src).items;       \
         (dst)->count = (src).count;       \
@@ -59,10 +58,8 @@ typedef int Errno;
     } while (0)
 
 #define da_append(da, item)                                                            \
-    do                                                                                 \
-    {                                                                                  \
-        if ((da)->count >= (da)->capacity)                                             \
-        {                                                                              \
+    do {                                                                               \
+        if ((da)->count >= (da)->capacity) {                                           \
             (da)->capacity = (da)->capacity == 0 ? DA_INIT_CAP : (da)->capacity * 2;   \
             (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
             assert((da)->items != NULL && "Buy more RAM lol");                         \
@@ -72,16 +69,12 @@ typedef int Errno;
     } while (0)
 
 #define da_append_many(da, new_items, new_items_count)                                        \
-    do                                                                                        \
-    {                                                                                         \
-        if ((da)->count + new_items_count > (da)->capacity)                                   \
-        {                                                                                     \
-            if ((da)->capacity == 0)                                                          \
-            {                                                                                 \
+    do {                                                                                      \
+        if ((da)->count + new_items_count > (da)->capacity) {                                 \
+            if ((da)->capacity == 0) {                                                        \
                 (da)->capacity = DA_INIT_CAP;                                                 \
             }                                                                                 \
-            while ((da)->count + new_items_count > (da)->capacity)                            \
-            {                                                                                 \
+            while ((da)->count + new_items_count > (da)->capacity) {                          \
                 (da)->capacity *= 2;                                                          \
             }                                                                                 \
             (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items));        \
@@ -94,8 +87,7 @@ typedef int Errno;
 char *temp_strdup(const char *s);
 void temp_reset(void);
 
-typedef struct
-{
+typedef struct {
     char *items;
     size_t count;
     size_t capacity;
@@ -106,8 +98,7 @@ typedef struct
 
 #define sb_append_buf da_append_many
 #define sb_append_cstr(sb, cstr)  \
-    do                            \
-    {                             \
+    do {                          \
         const char *s = (cstr);   \
         size_t n = strlen(s);     \
         da_append_many(sb, s, n); \
@@ -116,15 +107,13 @@ typedef struct
 
 #define sb_to_sv(sb) sv_from_parts((sb).items, (sb).count)
 
-typedef struct
-{
+typedef struct {
     const char **items;
     size_t count;
     size_t capacity;
 } Files;
 
-typedef enum
-{
+typedef enum {
     FT_REGULAR,
     FT_DIRECTORY,
     FT_OTHER,

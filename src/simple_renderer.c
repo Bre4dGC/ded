@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "./simple_renderer.h"
-#include "./common.h"
+#include "simple_renderer.h"
+#include "common.h"
 
 #define vert_shader_file_path "./shaders/simple.vert"
 

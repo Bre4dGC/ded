@@ -27,8 +27,10 @@ static inline void shortcuts_handle_keydown(SDL_Event *event,
     {
         switch (sym)
         {
-            case SDLK_F3:
-                *file_browser = false;
+            case SDLK_d:
+                if (mod & KMOD_CTRL) {
+                    *file_browser = false;
+                }
                 return;
             case SDLK_UP:
                 if (fb->cursor > 0) fb->cursor -= 1;
@@ -114,8 +116,37 @@ static inline void shortcuts_handle_keydown(SDL_Event *event,
             break;
 
         case SDLK_d:
-            if (mod & KMOD_CTRL) *file_browser = true;
+            if (mod & KMOD_CTRL) {
+                *file_browser = true;
+            }
             break;
+
+        case SDLK_z:
+            if (mod & KMOD_CTRL) {
+                // TODO: implement undo
+            }
+            break;
+
+        case SDLK_y:
+            if (mod & KMOD_CTRL) {
+                // TODO: implement redo
+            }
+            break;
+
+        case SDLK_COMMA:
+            if (mod & KMOD_CTRL) {
+                // TODO: open settings
+            }
+            break;
+
+        case SDLK_n:
+            if (mod & KMOD_CTRL) {
+                // TODO: create a new file
+            }
+            break;
+
+        // TODO: Alt+Up/Down to move lines up and down
+        // TODO: Ctrl+[/] to fold/unfold code blocks
 
         case SDLK_F5:
             simple_renderer_reload_shaders(sr);
@@ -196,7 +227,7 @@ static inline void shortcuts_handle_keydown(SDL_Event *event,
         case SDLK_RIGHT:
             editor_update_selection(editor, mod & KMOD_SHIFT);
             if (mod & KMOD_CTRL) editor_move_word_right(editor);
-            else editor_move_char_right(editor); // fixed typo
+            else editor_move_char_right(editor);
             editor->last_stroke = SDL_GetTicks();
             break;
 

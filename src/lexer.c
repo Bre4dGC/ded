@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "common.h"
-#include "./lexer.h"
+#include "lexer.h"
 
 typedef struct {
     Token_Kind kind;
@@ -129,18 +129,10 @@ Lexer lexer_new(Free_Glyph_Atlas *atlas, const char *content, size_t content_len
 bool lexer_starts_with(Lexer *lex, const char *prefix)
 {
     size_t prefix_len = strlen(prefix);
-    if (prefix_len == 0)
-    {
-        return true;
-    }
-    if (lex->cursor + prefix_len - 1 >= lex->content_len)
-    {
-        return false;
-    }
-    for (size_t i = 0; i < prefix_len; ++i)
-    {
-        if (prefix[i] != lex->content[lex->cursor + i])
-        {
+    if (prefix_len == 0) return true;
+    if (lex->cursor + prefix_len - 1 >= lex->content_len) return false;
+    for (size_t i = 0; i < prefix_len; ++i) {
+        if (prefix[i] != lex->content[lex->cursor + i]) {
             return false;
         }
     }

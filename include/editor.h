@@ -56,6 +56,8 @@ Errno editor_load_from_file(Editor *editor, const char *file_path);
 
 void editor_backspace(Editor *editor);
 void editor_delete(Editor *editor);
+void editor_delete_word_left(Editor *editor);
+void editor_delete_word_right(Editor *editor);
 size_t editor_cursor_row(const Editor *e);
 
 void editor_move_line_up(Editor *e);
@@ -82,6 +84,7 @@ void editor_clipboard_copy(Editor *e);
 void editor_clipboard_paste(Editor *e);
 void editor_start_search(Editor *e);
 void editor_stop_search(Editor *e);
+void editor_formatting_indent(Editor *e);
 bool editor_search_matches_at(Editor *e, size_t pos);
 
 #endif // EDITOR_H_

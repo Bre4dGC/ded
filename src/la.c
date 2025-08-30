@@ -1,4 +1,4 @@
-#include "./la.h"
+#include "la.h"
 
 Vec2f vec2f(float x, float y)
 {

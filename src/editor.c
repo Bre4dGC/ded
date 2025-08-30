@@ -355,7 +355,7 @@ void editor_render(SDL_Window *window, Free_Glyph_Atlas *atlas, Simple_Renderer 
                         atlas, editor->data.items + select_begin_chr, select_end_chr - select_begin_chr,
                         &select_end_scr);
 
-                    Vec4f selection_color = vec4f(.25, .25, .25, 1);
+                    Vec4f selection_color = hex_to_vec4f(0x363a4fff);
                     simple_renderer_solid_rect(sr, select_begin_scr, vec2f(select_end_scr.x - select_begin_scr.x, FREE_GLYPH_FONT_SIZE * LINE_SPACING_FACTOR), selection_color);
                 }
             }

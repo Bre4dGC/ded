@@ -27,7 +27,6 @@
 // Needed when ded is ran without any file so it does not know where to save.
 
 // TODO: An ability to create a new file
-// TODO: Delete a word
 // TODO: Delete selection
 // TODO: Undo/redo system
 
@@ -55,8 +54,7 @@ static File_Browser fb = {0};
 
 // TODO: display errors reported via flash_error right in the text editor window somehow
 #define flash_error(...)              \
-    do                                \
-    {                                 \
+    do {                              \
         fprintf(stderr, __VA_ARGS__); \
         fprintf(stderr, "\n");        \
     } while (0)
@@ -64,12 +62,10 @@ static File_Browser fb = {0};
 int main(int argc, char **argv)
 {
     Errno err;
-
     FT_Library library = {0};
 
     FT_Error error = FT_Init_FreeType(&library);
-    if (error)
-    {
+    if (error) {
         fprintf(stderr, "ERROR: Could not initialize FreeType2 library\n");
         return 1;
     }
@@ -79,31 +75,26 @@ int main(int argc, char **argv)
 
     FT_Face face;
     error = FT_New_Face(library, font_file_path, 0, &face);
-    if (error == FT_Err_Unknown_File_Format)
-    {
+    if (error == FT_Err_Unknown_File_Format) {
         fprintf(stderr, "ERROR: `%s` has an unknown format\n", font_file_path);
         return 1;
     }
-    else if (error)
-    {
+    else if (error) {
         fprintf(stderr, "ERROR: Could not load file `%s`\n", font_file_path);
         return 1;
     }
 
     FT_UInt pixel_size = FREE_GLYPH_FONT_SIZE;
     error = FT_Set_Pixel_Sizes(face, 0, pixel_size);
-    if (error)
-    {
+    if (error) {
         fprintf(stderr, "ERROR: Could not set pixel size to %u\n", pixel_size);
         return 1;
     }
 
-    if (argc > 1)
-    {
+    if (argc > 1) {
         const char *file_path = argv[1];
         err = editor_load_from_file(&editor, file_path);
-        if (err != 0)
-        {
+        if (err != 0) {
             fprintf(stderr, "ERROR: Could not read file %s: %s\n", file_path, strerror(err));
             return 1;
         }
@@ -111,14 +102,12 @@ int main(int argc, char **argv)
 
     const char *dir_path = ".";
     err = fb_open_dir(&fb, dir_path);
-    if (err != 0)
-    {
+    if (err != 0) {
         fprintf(stderr, "ERROR: Could not read directory %s: %s\n", dir_path, strerror(err));
         return 1;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "ERROR: Could not initialize SDL: %s\n", SDL_GetError());
         return 1;
     }
@@ -128,8 +117,7 @@ int main(int argc, char **argv)
                          0, 0,
                          SCREEN_WIDTH, SCREEN_HEIGHT,
                          SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
-    if (window == NULL)
-    {
+    if (window == NULL) {
         fprintf(stderr, "ERROR: Could not create SDL window: %s\n", SDL_GetError());
         return 1;
     }
@@ -146,15 +134,13 @@ int main(int argc, char **argv)
         printf("GL version %d.%d\n", major, minor);
     }
 
-    if (SDL_GL_CreateContext(window) == NULL)
-    {
+    if (SDL_GL_CreateContext(window) == NULL) {
         fprintf(stderr, "ERROR: Could not create OpenGL context: %s\n", SDL_GetError());
         return 1;
     }
 
     GLenum glewErr = glewInit();
-    if (GLEW_OK != glewErr)
-    {
+    if (GLEW_OK != glewErr) {
         fprintf(stderr, "ERROR: Could not initialize GLEW: %s\n", glewGetErrorString(glewErr));
         return 1;
     }
@@ -162,13 +148,11 @@ int main(int argc, char **argv)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    if (GLEW_ARB_debug_output)
-    {
+    if (GLEW_ARB_debug_output) {
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallback(MessageCallback, 0);
     }
-    else
-    {
+    else {
         fprintf(stderr, "WARNING: GLEW_ARB_debug_output is not available");
     }
 
@@ -180,14 +164,11 @@ int main(int argc, char **argv)
 
     bool quit = false;
     bool file_browser = false;
-    while (!quit)
-    {
+    while (!quit) {
         const Uint32 start = SDL_GetTicks();
         SDL_Event event = {0};
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
                 case SDL_QUIT:
                     quit = true;
                     break;
@@ -217,6 +198,8 @@ int main(int argc, char **argv)
             SDL_GetWindowSize(window, &w, &h);
             // TODO(#19): update the viewport and the resolution only on actual window change
             glViewport(0, 0, w, h);
+            sr.resolution.x = (float)w;
+            sr.resolution.y = (float)h;
         }
 
         Vec4f bg = hex_to_vec4f(0x24273aFF);
@@ -238,7 +221,6 @@ int main(int argc, char **argv)
             SDL_Delay(delta_time_ms - duration);
         }
     }
-
     return 0;
 }
 

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
-#include "./free_glyph.h"
+#include "free_glyph.h"
 
 void free_glyph_atlas_init(Free_Glyph_Atlas *atlas, FT_Face face)
 {

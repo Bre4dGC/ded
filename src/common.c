@@ -15,7 +15,7 @@
 
 #include "common.h"
 #define ARENA_IMPLEMENTATION
-#include "./arena.h"
+#include "arena.h"
 #define SV_IMPLEMENTATION
 #include "sv.h"
 
@@ -153,7 +153,7 @@ Errno type_of_file(const char *file_path, File_Type *ftype)
 #else
     struct stat sb = {0};
     if (stat(file_path, &sb) < 0) return errno;
-    if (S_ISREG(sb.st_mode)) *ftype = FT_REGULAR; 
+    else if (S_ISREG(sb.st_mode)) *ftype = FT_REGULAR;
     else if (S_ISDIR(sb.st_mode)) *ftype = FT_DIRECTORY;
     else *ftype = FT_OTHER;
 #endif

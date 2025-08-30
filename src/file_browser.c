@@ -158,8 +158,7 @@ void fb_render(const File_Browser *fb, SDL_Window *window, Free_Glyph_Atlas *atl
     simple_renderer_flush(sr);
 
     simple_renderer_set_shader(sr, SHADER_FOR_TEXT);
-    for (size_t row = 0; row < fb->files.count; ++row)
-    {
+    for (size_t row = 0; row < fb->files.count; ++row) {
         Vec4f color;
         File_Type ft;
         type_of_file(fb->files.items[row], &ft);
