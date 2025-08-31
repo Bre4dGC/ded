@@ -175,9 +175,10 @@ void editor_move_char_right(Editor *e)
 void editor_move_word_left(Editor *e)
 {
     editor_stop_search(e);
+    if (e->cursor == 0) return;
     if(isalnum(e->data.items[e->cursor - 1])) {
-        while (isalnum(e->data.items[e->cursor - 1]) && e->cursor < e->data.count) {
-            e->cursor -= 1;
+        while (isalnum(e->data.items[e->cursor - 1]) && e->cursor > 0) {
+            e->cursor--;
         }
     }
     else if (e->data.items[e->cursor - 1] == '\n') {
@@ -185,11 +186,10 @@ void editor_move_word_left(Editor *e)
     }
     else {
         while (!isalnum(e->data.items[e->cursor - 1]) && 
-                e->cursor < e->data.count && 
-                e->data.items[e->cursor - 1] != '\n' && 
-                e->cursor > 0)
+                e->cursor > 0 && 
+                e->data.items[e->cursor - 1] != '\n')
         {
-            e->cursor -= 1;
+            e->cursor--;
         }
     }
 }
@@ -197,6 +197,7 @@ void editor_move_word_left(Editor *e)
 void editor_move_word_right(Editor *e)
 {
     editor_stop_search(e);
+    if (e->cursor >= e->data.count) return;
     if(isalnum(e->data.items[e->cursor])) {
         while (isalnum(e->data.items[e->cursor]) && e->cursor < e->data.count) {
             e->cursor++;
@@ -211,7 +212,7 @@ void editor_move_word_right(Editor *e)
                 e->data.items[e->cursor] != '\n')
         {
             e->cursor++;
-        }        
+        }
     }
 }
 
